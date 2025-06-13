@@ -11,9 +11,9 @@ readme = "README.md"
 
 
 [dependencies]
-aide = "^0.14"
+aide = "^0.15"
 axum = "^0.8"
-axum_typed_multipart = "^0.15"
-schemars = "^0.8"
+axum_typed_multipart = "^0.16"
+schemars = "^0.9"
 indexmap = "^2.8"
 async-trait = "^0.1"

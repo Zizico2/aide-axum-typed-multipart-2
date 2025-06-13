@@ -1,13 +1,13 @@
-use std::ops::Deref;
+use std::{borrow::Cow, ops::Deref};
 
 use aide::{
+    OperationInput,
     generate::GenContext,
     openapi::{MediaType, Operation, RequestBody, SchemaObject},
     operation::set_body,
-    OperationInput,
 };
-use axum::extract::{multipart::Field, FromRequest, Request};
-use axum_typed_multipart::{async_trait, TryFromField, TryFromMultipart};
+use axum::extract::{FromRequest, Request, multipart::Field};
+use axum_typed_multipart::{TryFromField, TryFromMultipart, async_trait};
 use indexmap::IndexMap;
 use schemars::JsonSchema;
 
@@ -42,7 +42,7 @@ where
     T: JsonSchema,
 {
     fn operation_input(ctx: &mut GenContext, operation: &mut Operation) {
-        let schema = ctx.schema.subschema_for::<T>().into_object();
+        let schema = ctx.schema.subschema_for::<T>();
         let resolved_schema = ctx.resolve_schema(&schema);
 
         set_body(
@@ -50,14 +50,14 @@ where
             operation,
             RequestBody {
                 description: resolved_schema
-                    .metadata
-                    .as_ref()
-                    .and_then(|m| m.description.clone()),
+                    .get("description")
+                    .and_then(|d| d.as_str())
+                    .map(String::from),
                 content: IndexMap::from_iter([(
                     "multipart/form-data".into(),
                     MediaType {
                         schema: Some(SchemaObject {
-                            json_schema: schema.into(),
+                            json_schema: schema,
                             example: None,
                             external_docs: None,
                         }),
@@ -97,11 +97,11 @@ impl<T: TryFromField> TryFromField for FieldData<T> {
 }
 
 impl<T: JsonSchema> JsonSchema for FieldData<T> {
-    fn schema_name() -> String {
+    fn schema_name() -> Cow<'static, str> {
         T::schema_name()
     }
 
-    fn json_schema(r#gen: &mut schemars::r#gen::SchemaGenerator) -> schemars::schema::Schema {
+    fn json_schema(r#gen: &mut schemars::SchemaGenerator) -> schemars::Schema {
         T::json_schema(r#gen)
     }
 }
